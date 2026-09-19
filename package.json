@@ -1,5 +1,14 @@
-"dependencies": {
-  "discord.js": "^14.14.0",
-  "dotenv": "^16.4.5",
-  "express": "^4.19.2"
+{
+  "name": "cubixora-bot",
+  "version": "1.0.0",
+  "description": "CubixoraSMP Discord Bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
 }
