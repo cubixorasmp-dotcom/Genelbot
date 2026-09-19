@@ -13,17 +13,30 @@ const {
   ButtonStyle
 } = require("discord.js");
 
+// 🌐 Render'ın port isteğini karşılamak için basit web sunucusu
+const express = require("express");
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get("/", (req, res) => {
+  res.send("Bot aktif ve çalışıyor!");
+});
+
+app.listen(PORT, () => {
+  console.log(`Web sunucusu ${PORT} portunda dinlemede.`);
+});
+
+// 🤖 Discord Bot Kurulumu
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent // Mesaj içeriğini okumak için kritik intent
   ],
   partials: [Partials.Message, Partials.Channel, Partials.GuildMember]
 });
 
-// Sunucu bazlı otorol ayarlarını tutmak için bellek haritası
 const otorolSettings = new Map();
 
 const slashCommands = [
@@ -47,7 +60,6 @@ client.once("ready", async () => {
     status: "online"
   });
 
-  // Komutları Discord'a kaydetme
   for (const guild of client.guilds.cache.values()) {
     try {
       await guild.commands.set(slashCommands.map(c => c.toJSON()));
@@ -55,7 +67,7 @@ client.once("ready", async () => {
   }
 });
 
-// Yeni üye katıldığında rolü otomatik verme
+// Yeni üye katıldığında otomatik rol verme
 client.on("guildMemberAdd", async member => {
   const roleId = otorolSettings.get(member.guild.id);
   if (!roleId) return;
@@ -71,45 +83,40 @@ client.on("guildMemberAdd", async member => {
   }
 });
 
-// Mesaj tabanlı komutlar (!site vb.)
+// Mesaj komutları (!site)
 client.on("messageCreate", async message => {
   if (message.author.bot) return;
 
-  if (message.content === '!site') {
-    // Şık bir Embed (Gömülü Mesaj) oluşturuyoruz
+  if (message.content === "!site") {
     const siteEmbed = new EmbedBuilder()
-      .setColor('#5865F2') // Discord mavisi
-      .setTitle('🌟 CubixoraSMP Web Paneli')
-      .setDescription('Sunucumuza kayıt olmak, yetkili başvurusu yapmak ve destek talebi (ticket) oluşturmak için aşağıdaki butona tıklayarak web sitemizi ziyaret edebilirsiniz!')
+      .setColor("#5865F2")
+      .setTitle("🌟 CubixoraSMP Web Paneli")
+      .setDescription("Sunucumuza kayıt olmak, yetkili başvurusu yapmak ve destek talebi oluşturmak için web sitemizi ziyaret edebilirsiniz!")
       .addFields(
-        { name: '🌐 Web Sitesi', value: '[cubixoraweb.onrender.com](https://cubixoraweb.onrender.com)', inline: true },
-        { name: '🎮 Sunucu IP', value: '`Cubixorasmp.play.hosting`', inline: true }
+        { name: "🌐 Web Sitesi", value: "[cubixoraweb.onrender.com](https://cubixoraweb.onrender.com)", inline: true },
+        { name: "🎮 Sunucu IP", value: "`Cubixorasmp.play.hosting`", inline: true }
       )
-      .setFooter({ text: 'CubixoraSMP Yönetimi', iconURL: message.guild.iconURL() })
+      .setFooter({ text: "CubixoraSMP Yönetimi", iconURL: message.guild.iconURL() })
       .setTimestamp();
 
-    // Siteye doğrudan gitmek için tıklanabilir buton ekliyoruz
     const row = new ActionRowBuilder()
       .addComponents(
         new ButtonBuilder()
-          .setLabel('Web Sitesini Aç')
+          .setLabel("Web Sitesini Aç")
           .setStyle(ButtonStyle.Link)
-          .setUrl('https://cubixoraweb.onrender.com')
-          .setEmoji('🔗')
+          .setUrl("https://cubixoraweb.onrender.com")
+          .setEmoji("🔗")
       );
 
-    // Mesajı kanala gönderiyoruz
     await message.reply({ embeds: [siteEmbed], components: [row] });
   }
 });
 
-// Slash komutlarını yönetme
 client.on("interactionCreate", async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
   const { commandName, guild, member } = interaction;
 
-  // Yetki kontrolü (Yönetici olmayanlar ayar yapamaz)
   if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) {
     return interaction.reply({ 
       content: "❌ Bu komutu kullanabilmek için **Yönetici** yetkisine sahip olmalısın!", 
@@ -120,12 +127,9 @@ client.on("interactionCreate", async interaction => {
   if (commandName === "otorol-ayarla") {
     const targetRole = interaction.options.getRole("rol");
 
-    // Botun rolü, verilecek rolden yukarıda mı kontrolü
     if (targetRole.position >= guild.members.me.roles.highest.position) {
-      return interaction.reply({
-        content: "❌ Bu rolün yetkisi benim en yüksek rolümden üstte veya aynı seviyede. Rolümü en üste taşımalısın!",
-        ephemeral: true
-      });
+      systemReply = "❌ Bu rolün yetkisi benim en yüksek rolümden üstte.";
+      return interaction.reply({ content: systemReply, ephemeral: true });
     }
 
     otorolSettings.set(guild.id, targetRole.id);
@@ -141,7 +145,7 @@ client.on("interactionCreate", async interaction => {
 
   if (commandName === "otorol-kapat") {
     if (!otorolSettings.has(guild.id)) {
-      return interaction.reply({ content: "⚠️ Bu sunucuda zaten aktif bir otorol sistemi bulunmuyor.", ephemeral: true });
+      return interaction.reply({ content: "⚠️ Bu sunucuda aktif bir otorol sistemi bulunmuyor.", ephemeral: true });
     }
 
     otorolSettings.delete(guild.id);
@@ -149,7 +153,7 @@ client.on("interactionCreate", async interaction => {
     const embed = new EmbedBuilder()
       .setColor(0xed4245)
       .setTitle("🔒 Otorol Kapatıldı")
-      .setDescription("Otorol sistemi bu sunucu için devre dışı bırakıldı.")
+      .setDescription("Otorol sistemi devre dışı bırakıldı.")
       .setTimestamp();
 
     return interaction.reply({ embeds: [embed] });
