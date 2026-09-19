@@ -8,7 +8,9 @@ const {
   EmbedBuilder,
   ActivityType,
   SlashCommandBuilder,
-  ChannelType
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle
 } = require("discord.js");
 
 const client = new Client({
@@ -39,9 +41,9 @@ const slashCommands = [
 ];
 
 client.once("ready", async () => {
-  console.log(`Otorol Botu aktif: ${client.user.tag}`);
+  console.log(`Otorol ve Site Botu aktif: ${client.user.tag}`);
   client.user.setPresence({
-    activities: [{ name: "Otorol Sistemi aktif!", type: ActivityType.Watching }],
+    activities: [{ name: "!site ile panele ulaşın!", type: ActivityType.Watching }],
     status: "online"
   });
 
@@ -66,6 +68,38 @@ client.on("guildMemberAdd", async member => {
     console.log(`[Otorol] ${member.user.tag} adlı kullanıcıya ${role.name} rolü verildi.`);
   } catch (error) {
     console.error(`[Otorol Hata] Rol verilemedi: ${error}`);
+  }
+});
+
+// Mesaj tabanlı komutlar (!site vb.)
+client.on("messageCreate", async message => {
+  if (message.author.bot) return;
+
+  if (message.content === '!site') {
+    // Şık bir Embed (Gömülü Mesaj) oluşturuyoruz
+    const siteEmbed = new EmbedBuilder()
+      .setColor('#5865F2') // Discord mavisi
+      .setTitle('🌟 CubixoraSMP Web Paneli')
+      .setDescription('Sunucumuza kayıt olmak, yetkili başvurusu yapmak ve destek talebi (ticket) oluşturmak için aşağıdaki butona tıklayarak web sitemizi ziyaret edebilirsiniz!')
+      .addFields(
+        { name: '🌐 Web Sitesi', value: '[cubixoraweb.onrender.com](https://cubixoraweb.onrender.com)', inline: true },
+        { name: '🎮 Sunucu IP', value: '`Cubixorasmp.play.hosting`', inline: true }
+      )
+      .setFooter({ text: 'CubixoraSMP Yönetimi', iconURL: message.guild.iconURL() })
+      .setTimestamp();
+
+    // Siteye doğrudan gitmek için tıklanabilir buton ekliyoruz
+    const row = new ActionRowBuilder()
+      .addComponents(
+        new ButtonBuilder()
+          .setLabel('Web Sitesini Aç')
+          .setStyle(ButtonStyle.Link)
+          .setUrl('https://cubixoraweb.onrender.com')
+          .setEmoji('🔗')
+      );
+
+    // Mesajı kanala gönderiyoruz
+    await message.reply({ embeds: [siteEmbed], components: [row] });
   }
 });
 
